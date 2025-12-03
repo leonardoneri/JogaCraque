@@ -1,0 +1,169 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  username      String   @unique
+  password      String
+  teamName      String   @default("Meu Time")
+  
+  // Game resources
+  coins         Int      @default(1000)
+  gems          Int      @default(50)
+  transferFunds Int      @default(5000)
+  
+  // Progress
+  level         Int      @default(1)
+  xp            Int      @default(0)
+  ratingMMR     Int      @default(1000)
+  
+  // Stats
+  matchesPlayed Int      @default(0)
+  wins          Int      @default(0)
+  draws         Int      @default(0)
+  losses        Int      @default(0)
+  
+  // Relations
+  players       Player[]
+  squad         Squad?
+  marketListings MarketListing[]
+  matchHistory  Match[]  @relation("PlayerMatches")
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("users")
+}
+
+model Player {
+  id            String   @id @default(uuid())
+  baseId        String?  // ID do jogador base
+  variation     String?  // Variação da carta
+  
+  // Player info
+  name          String
+  position      String   // Position enum as string
+  nationality   String?
+  club          String?
+  collection    String   @default("Base")
+  rarity        String   // Rarity enum as string
+  
+  // Stats
+  rating        Int
+  pace          Int
+  shooting      Int
+  passing       Int
+  dribbling     Int
+  defending     Int
+  physical      Int
+  vision        Int
+  positioning   Int
+  
+  // Progression
+  level         Int      @default(1)
+  xp            Int      @default(0)
+  
+  // Game stats
+  matches       Int      @default(0)
+  goals         Int      @default(0)
+  assists       Int      @default(0)
+  
+  // Market
+  marketValue   Int      @default(0)
+  
+  // Image
+  image         String?
+  
+  // Relations
+  userId        String?
+  user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  squadId       String?
+  squad         Squad?   @relation(fields: [squadId], references: [id])
+  
+  marketListing MarketListing?
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("players")
+}
+
+model Squad {
+  id            String   @id @default(uuid())
+  
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  formation     String   @default("4-3-3")
+  
+  // Squad positions (11 players)
+  players       Player[]
+  
+  // Store positions as JSON for flexibility
+  positions     Json     @default("[]")
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@map("squads")
+}
+
+model Match {
+  id            String   @id @default(uuid())
+  
+  // Match info
+  homeUserId    String
+  homeUser      User     @relation("PlayerMatches", fields: [homeUserId], references: [id])
+  
+  opponentName  String   // Nome do oponente (pode ser IA)
+  opponentSquad Json     // Squad do oponente
+  
+  // Result
+  homeScore     Int
+  awayScore     Int
+  result        String   // 'V', 'D', 'E'
+  
+  // Match data
+  events        Json     @default("[]")
+  duration      Int      @default(90)
+  
+  // Rewards
+  coinsEarned   Int      @default(0)
+  xpEarned      Int      @default(0)
+  
+  // Match type
+  matchType     String   // 'RANKED', 'FRIENDLY', 'CAMPAIGN'
+  
+  createdAt     DateTime @default(now())
+  
+  @@map("matches")
+}
+
+model MarketListing {
+  id            String   @id @default(uuid())
+  
+  playerId      String   @unique
+  player        Player   @relation(fields: [playerId], references: [id], onDelete: Cascade)
+  
+  sellerId      String
+  seller        User     @relation(fields: [sellerId], references: [id], onDelete: Cascade)
+  
+  price         Int
+  
+  expiresAt     DateTime
+  
+  createdAt     DateTime @default(now())
+  
+  @@map("market_listings")
+}

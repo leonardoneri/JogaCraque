@@ -1,0 +1,5 @@
+{
+  "name": "JogaCraque MMO",
+  "description": "Um MMORPG de futebol baseado em navegador que permite gerenciamento de time, coleção de cartas e simulação de partidas em tempo real.",
+  "requestFramePermissions": []
+}

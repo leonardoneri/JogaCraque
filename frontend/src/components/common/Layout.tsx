@@ -1,22 +1,21 @@
 
+import { Coins, Gem, LayoutDashboard, Lock, Menu, Repeat, ShoppingBag, Trophy, Users } from 'lucide-react';
 import React from 'react';
 import { NavLink } from 'react-router-dom';
-import { useGame } from '../context/GameContext';
-import { Trophy, Users, ShoppingBag, LayoutDashboard, Coins, Gem, Menu, Repeat, Lock } from 'lucide-react';
+import { useGame } from '../../context/GameContext';
 
 export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { state } = useGame();
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
 
   const NavItem = ({ to, icon: Icon, label, isAdmin = false }: { to: string, icon: any, label: string, isAdmin?: boolean }) => (
-    <NavLink 
-      to={to} 
+    <NavLink
+      to={to}
       onClick={() => setMobileMenuOpen(false)}
-      className={({ isActive }) => 
-        `flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${
-          isActive 
-            ? isAdmin ? 'bg-red-900/50 text-red-200 font-semibold border border-red-800' : 'bg-green-600 text-white font-semibold' 
-            : isAdmin ? 'text-red-400/50 hover:bg-red-900/20 hover:text-red-300' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+      className={({ isActive }) =>
+        `flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors ${isActive
+          ? isAdmin ? 'bg-red-900/50 text-red-200 font-semibold border border-red-800' : 'bg-green-600 text-white font-semibold'
+          : isAdmin ? 'text-red-400/50 hover:bg-red-900/20 hover:text-red-300' : 'text-slate-400 hover:bg-slate-800 hover:text-white'
         }`
       }
     >
@@ -33,28 +32,28 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
           <h1 className="text-3xl font-display font-bold text-green-500 italic">JOGACRAQUE</h1>
           <p className="text-xs text-slate-500 tracking-wider">MMO MANAGER</p>
         </div>
-        
+
         <nav className="flex-1 px-4 space-y-2">
           <NavItem to="/" icon={LayoutDashboard} label="Início" />
           <NavItem to="/squad" icon={Users} label="Meu Time" />
           <NavItem to="/market" icon={ShoppingBag} label="Mercado & Loja" />
           <NavItem to="/match" icon={Trophy} label="Jogar" />
         </nav>
-        
+
         <div className="px-4 pb-4">
-           <NavItem to="/admin" icon={Lock} label="Admin" isAdmin={true} />
+          <NavItem to="/admin" icon={Lock} label="Admin" isAdmin={true} />
         </div>
 
         <div className="p-6 border-t border-slate-800">
-           <div className="flex items-center space-x-3 mb-2">
-              <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
-                <Users size={20} />
-              </div>
-              <div>
-                <p className="font-bold text-sm text-white">{state.userTeamName}</p>
-                <p className="text-xs text-slate-500">Nvl {state.level} • MMR {state.ratingMMR}</p>
-              </div>
-           </div>
+          <div className="flex items-center space-x-3 mb-2">
+            <div className="w-10 h-10 rounded-full bg-slate-700 flex items-center justify-center">
+              <Users size={20} />
+            </div>
+            <div>
+              <p className="font-bold text-sm text-white">{state.userTeamName}</p>
+              <p className="text-xs text-slate-500">Nvl {state.level} • MMR {state.ratingMMR}</p>
+            </div>
+          </div>
         </div>
       </aside>
 
@@ -78,7 +77,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
             <NavItem to="/market" icon={ShoppingBag} label="Mercado & Loja" />
             <NavItem to="/match" icon={Trophy} label="Jogar" />
             <div className="pt-4 border-t border-slate-800">
-               <NavItem to="/admin" icon={Lock} label="Admin" isAdmin={true} />
+              <NavItem to="/admin" icon={Lock} label="Admin" isAdmin={true} />
             </div>
           </nav>
         </div>

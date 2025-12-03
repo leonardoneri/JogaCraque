@@ -1,5 +1,5 @@
 
-import { Player, Position, Rarity, PlayerAttributes, COUNTRIES, MatchEventType } from '../types';
+import { Player, Position, Rarity, PlayerAttributes, COUNTRIES, MatchEventType } from '../types.js';
 
 // Helper to generate a random number within a range
 const randomInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;

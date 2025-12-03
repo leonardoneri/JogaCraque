@@ -1,80 +1,85 @@
-# JogaCraque MMO
+# JogaCraque MMO - Documentação Técnica
 
-Um jogo MMO de gerenciamento de futebol desenvolvido com React e Node.js.
+## 1. Visão Geral
+O **JogaCraque MMO** é um simulador de gerenciamento de futebol (Web Game) focado em coleção de cartas, estratégia tática e simulação de partidas. Desenvolvido como uma SPA (Single Page Application) em React, o jogo oferece uma experiência imersiva de "Ultimate Team" diretamente no navegador.
 
-## 📁 Estrutura do Projeto
+---
 
-```
-JogaCraque/
-├── frontend/           # Aplicação React
-│   ├── src/
-│   │   ├── components/ # Componentes reutilizáveis
-│   │   ├── pages/      # Páginas da aplicação
-│   │   ├── context/    # Context API
-│   │   ├── services/   # Serviços e lógica
-│   │   ├── types.ts    # Definições de tipos
-│   │   ├── App.tsx     # Componente principal
-│   │   └── index.tsx   # Entry point
-│   ├── index.html
-│   ├── package.json
-│   ├── tsconfig.json
-│   └── vite.config.ts
-│
-└── backend/            # Servidor Node.js
-    ├── src/
-    │   └── index.ts    # Entry point do servidor
-    ├── package.json
-    ├── tsconfig.json
-    └── .env.example
-```
+## 2. Arquitetura do Sistema
 
-## 🚀 Como Executar
+### Estrutura de Diretórios (Monorepo)
+O projeto está dividido em duas grandes áreas de responsabilidade:
 
-### Frontend
+- **`/frontend`**: Aplicação Cliente (React + Vite + Tailwind).
+  - Contém toda a interface, lógica de jogo (client-side), gerenciamento de estado e assets.
+- **`/backend`**: Servidor API (Node.js + Express + Prisma).
+  - Responsável pela persistência de dados, autenticação e comunicação em tempo real (WebSockets).
 
-```bash
-cd frontend
-npm install
-npm run dev
-```
+### Tecnologias Chave
+- **Frontend:** React 18, TypeScript, Tailwind CSS, Lucide Icons, Context API.
+- **Backend:** Node.js, Express, Socket.io, Prisma ORM, PostgreSQL.
+- **Build Tool:** Vite.
 
-O frontend estará disponível em `http://localhost:3000`
+---
 
-### Backend
+## 3. Funcionalidades Principais
 
-```bash
-cd backend
-npm install
-cp .env.example .env
-# Configure suas variáveis de ambiente no arquivo .env
-npm run dev
-```
+### 🃏 Sistema de Cartas (Players)
+- **Atributos:** 6 status principais (RIT, FIN, PAS, DRI, DEF, FIS) adaptáveis por posição (Goleiro vs Linha).
+- **Raridade:** Comum, Raro, Épico, Lendário.
+- **Full Art:** Suporte para renderização de cartas baseadas puramente em imagem (importadas) ou geradas via CSS.
+- **Coleções:** Sistema de categorização por eventos (ex: Libertadores, Halloween).
 
-O backend estará disponível em `http://localhost:3001`
+### ⚽ Gestão de Elenco (Squad)
+- **Campo Interativo:** Visualização tática 4-3-3 com slots arrastáveis.
+- **Banco de Reservas:** Filtro e busca de jogadores.
+- **Ações:** Venda rápida, troca de posição e visualização detalhada de stats.
 
-## 🛠️ Tecnologias
+### 💰 Economia (Market)
+- **Moedas (Coins):** Moeda soft ganha jogando. Usada para pacotes.
+- **Fundos de Transferência:** Moeda específica ganha vendendo jogadores. Usada no mercado direto.
+- **Loja (Packs):** Sistema Gacha com probabilidades de drop.
+- **Mercado:** Listagem de jogadores para compra direta.
 
-### Frontend
-- React 19
-- TypeScript
-- Vite
-- React Router DOM
-- Lucide React (ícones)
-- Google Gemini AI
+### 🎮 Motor de Partida (Match Engine)
+- **Simulação Texto-Baseada:** Narrativa minuto a minuto.
+- **Zonas de Campo:** Lógica de progressão (Defesa -> Meio -> Ataque -> Área).
+- **Duelos de RPG:** Cálculos de sucesso baseados em atributos (Atacante vs Defensor).
+- **Eventos:** VAR, Lesões, Cartões, Bolas Paradas, Gols Especiais (Bicicleta, Olímpico).
+- **Imersão:** Popups visuais dramáticos e Chat ao vivo.
 
-### Backend
-- Node.js
-- TypeScript
-- Express
-- Socket.IO
-- CORS
+### 🛡️ Painel Administrativo (Admin)
+- **Importador:** Crawler para buscar e importar cartas de fontes externas.
+- **Editor Manual:** Ferramenta completa para ajustar atributos, nomes e imagens das cartas.
+- **Gestão:** Exclusão e limpeza de banco de dados.
 
-## 📝 Próximos Passos
+---
 
-- [ ] Implementar WebSocket real (substituir mock)
-- [ ] Criar rotas de API REST
-- [ ] Implementar autenticação
-- [ ] Adicionar banco de dados
-- [ ] Sistema de matchmaking real
-- [ ] Deploy da aplicação
+## 4. Guia de Instalação e Execução
 
+### Pré-requisitos
+- Node.js (v16+)
+- NPM ou Yarn
+
+### Rodando o Frontend (Desenvolvimento)
+1. Navegue até a pasta: `cd frontend`
+2. Instale as dependências: `npm install`
+3. Inicie o servidor: `npm run dev`
+4. Acesse: `http://localhost:3000`
+
+### Rodando o Backend
+1. Navegue até a pasta: `cd backend`
+2. Instale as dependências: `npm install`
+3. Configure o `.env` com a URL do seu banco PostgreSQL.
+4. Gere o Prisma Client: `npx prisma generate`
+5. Inicie o servidor: `npm run dev`
+
+---
+
+## 5. Roadmap de Melhorias
+
+- [ ] **Backend Integration:** Migrar `GameContext` para API REST real.
+- [ ] **Auth:** Implementar Login/Registro com JWT.
+- [ ] **Multiplayer:** Implementar WebSockets reais para partidas PvP.
+- [ ] **Leagues:** Criar sistema de divisões e temporadas.
+- [ ] **Social:** Adicionar sistema de Amigos e Guildas (Clãs).

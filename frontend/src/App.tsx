@@ -1,13 +1,13 @@
 
 import React from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Navigate, Route, HashRouter as Router, Routes } from 'react-router-dom';
+import { Layout } from './components/common/Layout';
 import { GameProvider } from './context/GameContext';
-import { Layout } from './components/Layout';
+import { Admin } from './pages/Admin';
 import { Dashboard } from './pages/Dashboard';
-import { Squad } from './pages/Squad';
 import { Market } from './pages/Market';
 import { Match } from './pages/Match';
-import { Admin } from './pages/Admin';
+import { Squad } from './pages/Squad';
 
 const App: React.FC = () => {
   return (

@@ -12,10 +12,15 @@ datasource db {
 
 model User {
   id            String   @id @default(uuid())
-  email         String   @unique
+  email         String?  @unique
   username      String   @unique
-  password      String
+  password      String?
   teamName      String   @default("Meu Time")
+  
+  // Auth fields
+  isGuest       Boolean  @default(false)
+  isAdmin       Boolean  @default(false)
+  guestToken    String?  @unique
   
   // Game resources
   coins         Int      @default(1000)
@@ -84,12 +89,16 @@ model Player {
   // Image
   image         String?
   
+  // Validation
+  isValidated   Boolean  @default(false)  // Flag para indicar se os dados foram revisados
+  
   // Relations
   userId        String?
   user          User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   
   squadId       String?
   squad         Squad?   @relation(fields: [squadId], references: [id])
+  squadPosition Int?     // Índice (0-10) no campo
   
   marketListing MarketListing?
   

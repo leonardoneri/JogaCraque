@@ -1,8 +1,10 @@
 import express from 'express';
+import { authMiddleware } from '../middlewares/auth.middleware.js';
+import authRoutes from './auth.routes.js';
 
 const router = express.Router();
 
-// Health check
+// Health check (sem autenticação)
 router.get('/health', (req, res) => {
     res.json({
         status: 'ok',
@@ -10,15 +12,20 @@ router.get('/health', (req, res) => {
     });
 });
 
-// TODO: Importar e adicionar outras rotas
-// import authRoutes from './auth.routes';
-// import playerRoutes from './player.routes';
-// import marketRoutes from './market.routes';
-// import squadRoutes from './squad.routes';
+// Rotas de autenticação (sem middleware)
+router.use('/auth', authRoutes);
 
-// router.use('/auth', authRoutes);
-// router.use('/players', playerRoutes);
+// Aplicar middleware de autenticação para todas as rotas abaixo
+router.use(authMiddleware);
+
+import adminRoutes from './admin.routes.js';
+import playerRoutes from './player.routes.js';
+import squadRoutes from './squad.routes.js';
+// import marketRoutes from './market.routes.js';
+
+router.use('/players', playerRoutes);
+router.use('/squad', squadRoutes);
+router.use('/admin', adminRoutes);
 // router.use('/market', marketRoutes);
-// router.use('/squad', squadRoutes);
 
 export default router;

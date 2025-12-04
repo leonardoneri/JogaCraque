@@ -4,6 +4,13 @@ interface RequestOptions extends RequestInit {
     params?: Record<string, string>;
 }
 
+/**
+ * Obtém o token de autenticação do localStorage
+ */
+const getAuthToken = (): string | null => {
+    return localStorage.getItem('auth_token');
+};
+
 class ApiClient {
     private baseURL: string;
 
@@ -23,11 +30,14 @@ class ApiClient {
 
     async get<T>(endpoint: string, options?: RequestOptions): Promise<T> {
         const url = this.buildURL(endpoint, options?.params);
+        const token = getAuthToken();
+
         const response = await fetch(url, {
             ...options,
             method: 'GET',
             headers: {
                 'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
                 ...options?.headers,
             },
         });
@@ -41,11 +51,14 @@ class ApiClient {
 
     async post<T>(endpoint: string, data?: any, options?: RequestOptions): Promise<T> {
         const url = this.buildURL(endpoint, options?.params);
+        const token = getAuthToken();
+
         const response = await fetch(url, {
             ...options,
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
                 ...options?.headers,
             },
             body: data ? JSON.stringify(data) : undefined,
@@ -60,11 +73,14 @@ class ApiClient {
 
     async put<T>(endpoint: string, data?: any, options?: RequestOptions): Promise<T> {
         const url = this.buildURL(endpoint, options?.params);
+        const token = getAuthToken();
+
         const response = await fetch(url, {
             ...options,
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
                 ...options?.headers,
             },
             body: data ? JSON.stringify(data) : undefined,
@@ -79,11 +95,14 @@ class ApiClient {
 
     async delete<T>(endpoint: string, options?: RequestOptions): Promise<T> {
         const url = this.buildURL(endpoint, options?.params);
+        const token = getAuthToken();
+
         const response = await fetch(url, {
             ...options,
             method: 'DELETE',
             headers: {
                 'Content-Type': 'application/json',
+                ...(token && { 'Authorization': `Bearer ${token}` }),
                 ...options?.headers,
             },
         });

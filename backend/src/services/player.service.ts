@@ -1,6 +1,11 @@
-import { Player, PrismaClient } from '@prisma/client';
+import { Player, Prisma, PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
+
+// Tipo para Player com Template incluído
+export type PlayerWithTemplate = Prisma.PlayerGetPayload<{
+    include: { template: true }
+}>;
 
 // Constantes para geração de jogadores (portadas do frontend)
 const FIRST_NAMES = ['Gabriel', 'Lucas', 'Matheus', 'Pedro', 'Rafael', 'Leo', 'Bruno', 'Thiago', 'Igor', 'Felipe', 'Alejandro', 'Diego', 'Carlos', 'Neymar', 'Vinicius', 'Rodrygo'];
@@ -90,68 +95,6 @@ export class PlayerService {
     }
 
     /**
-     * Gera um jogador aleatório
-     */
-    generateRandomPlayer(userId?: string): Omit<Player, 'id' | 'createdAt' | 'updatedAt' | 'squadId' | 'marketListing'> {
-        // Determinar raridade
-        let rarity = Rarity.COMMON;
-        const roll = Math.random();
-        if (roll < 0.6) rarity = Rarity.COMMON;
-        else if (roll < 0.85) rarity = Rarity.RARE;
-        else if (roll < 0.98) rarity = Rarity.EPIC;
-        else rarity = Rarity.LEGENDARY;
-
-        // Determinar rating
-        let minRating = 50;
-        let maxRating = 99;
-        switch (rarity) {
-            case Rarity.COMMON: minRating = 55; maxRating = 74; break;
-            case Rarity.RARE: minRating = 75; maxRating = 84; break;
-            case Rarity.EPIC: minRating = 85; maxRating = 92; break;
-            case Rarity.LEGENDARY: minRating = 93; maxRating = 99; break;
-        }
-        const rating = randomInt(minRating, maxRating);
-
-        // Determinar posição
-        const posKeys = Object.values(Position);
-        const position = posKeys[randomInt(0, posKeys.length - 1)];
-
-        // Gerar atributos
-        const attributes = this.generateAttributes(rating, position);
-
-        // Dados básicos
-        const name = `${FIRST_NAMES[randomInt(0, FIRST_NAMES.length - 1)]} ${LAST_NAMES[randomInt(0, LAST_NAMES.length - 1)]}`;
-        const nationality = COUNTRIES[randomInt(0, COUNTRIES.length - 1)];
-        const club = CLUBS[randomInt(0, CLUBS.length - 1)];
-        const marketValue = this.calculateMarketValue(rarity, rating);
-        const image = `https://picsum.photos/seed/${randomInt(1000, 9999)}/200/200`;
-
-        return {
-            userId: userId || null,
-            baseId: `base-${Date.now()}-${randomInt(0, 9999)}`,
-            variation: 'base',
-            name,
-            position,
-            nationality,
-            club,
-            collection: 'Base',
-            rarity,
-            rating,
-            ...attributes,
-            level: 1,
-            xp: 0,
-            matches: 0,
-            goals: 0,
-            assists: 0,
-            marketValue,
-            image,
-            squadId: null,
-            squadPosition: null,
-            isValidated: false
-        } as any; // Cast necessário pois Omit não remove campos opcionais do tipo Prisma corretamente
-    }
-
-    /**
      * Cria um jogador no banco de dados
      */
     async createPlayer(data: any): Promise<Player> {
@@ -162,67 +105,48 @@ export class PlayerService {
 
     /**
      * Gera e salva um pacote de jogadores para um usuário
+     * Usa CardTemplates validados como base
      */
-    async generatePack(userId: string, count: number = 5): Promise<Player[]> {
-        // Tentar buscar jogadores validados para usar como template
-        const validatedCount = await prisma.player.count({
+    async generatePack(userId: string, count: number = 5): Promise<PlayerWithTemplate[]> {
+        // Buscar templates validados
+        const validatedCount = await prisma.cardTemplate.count({
             where: { isValidated: true }
         });
 
-        let playersData: any[] = [];
-
-        if (validatedCount > 0) {
-            // Buscar templates aleatórios
-            // Como o Prisma não tem "ORDER BY RANDOM()", buscamos IDs ou usamos skip aleatório
-            // Para simplificar, vamos buscar todos os validados (assumindo que não são milhões) e escolher aleatoriamente
-            // Se forem muitos, isso precisará ser otimizado
-            const templates = await prisma.player.findMany({
-                where: { isValidated: true }
-            });
-
-            playersData = Array(count).fill(null).map(() => {
-                const template = templates[randomInt(0, templates.length - 1)];
-
-                // Clonar o template para o novo usuário
-                return {
-                    userId,
-                    baseId: template.baseId,
-                    variation: template.variation,
-                    name: template.name,
-                    position: template.position,
-                    nationality: template.nationality,
-                    club: template.club,
-                    collection: template.collection,
-                    rarity: template.rarity,
-                    rating: template.rating,
-                    pace: template.pace,
-                    shooting: template.shooting,
-                    passing: template.passing,
-                    dribbling: template.dribbling,
-                    defending: template.defending,
-                    physical: template.physical,
-                    vision: template.vision,
-                    positioning: template.positioning,
-                    level: 1,
-                    xp: 0,
-                    matches: 0,
-                    goals: 0,
-                    assists: 0,
-                    marketValue: template.marketValue,
-                    image: template.image,
-                    squadId: null,
-                    squadPosition: null,
-                    isValidated: true // Jogadores gerados de templates já nascem validados
-                };
-            });
-        } else {
-            // Fallback: Gerar aleatório se não houver templates
-            playersData = Array(count).fill(null).map(() => this.generateRandomPlayer(userId));
+        if (validatedCount === 0) {
+            throw new Error('Não há templates de cartas validados disponíveis para gerar pacotes');
         }
+
+        // Buscar todos os templates validados
+        const templates = await prisma.cardTemplate.findMany({
+            where: { isValidated: true }
+        });
+
+        // Criar jogadores a partir dos templates
+        const playersData = Array(count).fill(null).map(() => {
+            const template = templates[randomInt(0, templates.length - 1)];
+
+            // Criar Player referenciando o template
+            return {
+                templateId: template.id,
+                userId,
+                level: 1,
+                xp: 0,
+                matches: 0,
+                goals: 0,
+                assists: 0,
+                marketValue: this.calculateMarketValue(template.rarity, template.rating),
+                squadId: null,
+                squadPosition: null
+            };
+        });
 
         // Usar transaction para criar todos de uma vez
         const createdPlayers = await prisma.$transaction(
-            playersData.map(data => prisma.player.create({ data }))
+            playersData.map(data => prisma.player.create({
+                data,
+                include: { template: true } // Incluir template nos resultados
+            }))
         );
 
         return createdPlayers;
@@ -231,20 +155,22 @@ export class PlayerService {
     /**
      * Busca jogadores de um usuário
      */
-    async getPlayersByUser(userId: string): Promise<Player[]> {
+    async getPlayersByUser(userId: string): Promise<PlayerWithTemplate[]> {
         return prisma.player.findMany({
             where: { userId },
-            orderBy: { rating: 'desc' }
+            include: { template: true },
+            orderBy: { createdAt: 'desc' }
         });
     }
 
     /**
      * Busca um jogador por ID
      */
-    async getPlayerById(id: string): Promise<Player | null> {
+    async getPlayerById(id: string): Promise<PlayerWithTemplate | null> {
         try {
             return await prisma.player.findUnique({
-                where: { id }
+                where: { id },
+                include: { template: true }
             });
         } catch (error) {
             console.error(`Error fetching player ${id}:`, error);
@@ -253,32 +179,31 @@ export class PlayerService {
     }
 
     /**
-     * Busca todos os jogadores não validados (Admin)
+     * Busca todos os templates não validados (Admin)
      */
-    async getUnvalidatedPlayers(): Promise<Player[]> {
-        return prisma.player.findMany({
+    async getUnvalidatedTemplates() {
+        return prisma.cardTemplate.findMany({
             where: { isValidated: false },
             orderBy: { createdAt: 'desc' }
         });
     }
 
     /**
-     * Marca um jogador como validado (Admin)
+     * Marca um template como validado (Admin)
      */
-    async markPlayerAsValidated(playerId: string): Promise<Player> {
-        return prisma.player.update({
-            where: { id: playerId },
+    async markTemplateAsValidated(templateId: string) {
+        return prisma.cardTemplate.update({
+            where: { id: templateId },
             data: { isValidated: true }
         });
     }
 
     /**
-     * Marca todos os jogadores de um usuário como validados (Admin)
+     * Marca todos os templates como validados (Admin)
      */
-    async validateAllPlayersByUser(userId: string): Promise<{ count: number }> {
-        const result = await prisma.player.updateMany({
+    async validateAllTemplates(): Promise<{ count: number }> {
+        const result = await prisma.cardTemplate.updateMany({
             where: {
-                userId,
                 isValidated: false  // Só atualiza os que ainda não foram validados
             },
             data: { isValidated: true }
@@ -288,48 +213,40 @@ export class PlayerService {
     }
 
     /**
-     * Importa múltiplos jogadores (Admin)
+     * Importa múltiplos templates de cartas (Admin)
+     * Cria CardTemplates que depois podem ser usados para gerar Players
      */
-    async importPlayers(userId: string, players: any[]): Promise<void> {
-        console.log(`[SERVICE] Starting import of ${players.length} players`);
-        console.log(`[SERVICE] First player sample:`, players[0]);
+    async importTemplates(templates: any[]): Promise<void> {
+        console.log(`[SERVICE] Starting import of ${templates.length} templates`);
+        console.log(`[SERVICE] First template sample:`, templates[0]);
 
-        const playersData = players.map(p => ({
-            userId,
-            baseId: p.baseId || `imported-${Date.now()}-${Math.random()}`,
-            variation: p.variation || 'base',
-            name: p.name,
-            position: p.position,
-            nationality: p.nationality || null,
-            club: p.club || null,
-            collection: p.collection || 'Base',
-            rarity: p.rarity,
-            rating: p.rating,
-            pace: p.attributes?.pace || 0,
-            shooting: p.attributes?.shooting || 0,
-            passing: p.attributes?.passing || 0,
-            dribbling: p.attributes?.dribbling || 0,
-            defending: p.attributes?.defending || 0,
-            physical: p.attributes?.physical || 0,
-            vision: p.attributes?.vision || 50,
-            positioning: p.attributes?.positioning || 50,
-            level: p.level || 1,
-            xp: p.xp || 0,
-            matches: p.stats?.matches || 0,
-            goals: p.stats?.goals || 0,
-            assists: p.stats?.assists || 0,
-            marketValue: p.marketValue || 0,
-            image: p.image || null,
-            squadId: null,
-            squadPosition: null,
+        const templatesData = templates.map(t => ({
+            baseId: t.baseId || `imported-${Date.now()}-${Math.random()}`,
+            variation: t.variation || 'base',
+            name: t.name,
+            position: t.position,
+            nationality: t.nationality || null,
+            club: t.club || null,
+            collection: t.collection || 'Base',
+            rarity: t.rarity,
+            rating: t.rating,
+            pace: t.attributes?.pace || 0,
+            shooting: t.attributes?.shooting || 0,
+            passing: t.attributes?.passing || 0,
+            dribbling: t.attributes?.dribbling || 0,
+            defending: t.attributes?.defending || 0,
+            physical: t.attributes?.physical || 0,
+            vision: t.attributes?.vision || 50,
+            positioning: t.attributes?.positioning || 50,
+            image: t.image || null,
             isValidated: false // Importados começam como não validados (precisam de revisão)
         }));
 
-        console.log(`[SERVICE] Mapped ${playersData.length} players for DB insertion`);
-        console.log(`[SERVICE] First mapped player:`, playersData[0]);
+        console.log(`[SERVICE] Mapped ${templatesData.length} templates for DB insertion`);
+        console.log(`[SERVICE] First mapped template:`, templatesData[0]);
 
-        const result = await prisma.player.createMany({
-            data: playersData,
+        const result = await prisma.cardTemplate.createMany({
+            data: templatesData,
             skipDuplicates: true
         });
 
@@ -338,8 +255,30 @@ export class PlayerService {
 
     /**
      * Atualiza um jogador (Admin)
+     * Atualiza apenas os campos do Player (progressão), não o template
      */
-    async updatePlayer(playerId: string, updates: any): Promise<Player> {
+    async updatePlayer(playerId: string, updates: any): Promise<PlayerWithTemplate> {
+        const data: any = {};
+
+        // Campos de progressão do Player
+        if (updates.level !== undefined) data.level = updates.level;
+        if (updates.xp !== undefined) data.xp = updates.xp;
+        if (updates.matches !== undefined) data.matches = updates.matches;
+        if (updates.goals !== undefined) data.goals = updates.goals;
+        if (updates.assists !== undefined) data.assists = updates.assists;
+        if (updates.marketValue !== undefined) data.marketValue = updates.marketValue;
+
+        return prisma.player.update({
+            where: { id: playerId },
+            data,
+            include: { template: true }
+        });
+    }
+
+    /**
+     * Atualiza um template de carta (Admin)
+     */
+    async updateTemplate(templateId: string, updates: any) {
         const data: any = {};
 
         if (updates.name) data.name = updates.name;
@@ -362,8 +301,8 @@ export class PlayerService {
             if (updates.attributes.positioning !== undefined) data.positioning = updates.attributes.positioning;
         }
 
-        return prisma.player.update({
-            where: { id: playerId },
+        return prisma.cardTemplate.update({
+            where: { id: templateId },
             data
         });
     }

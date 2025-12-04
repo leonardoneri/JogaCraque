@@ -8,58 +8,53 @@ const router = Router();
 router.use(requireAdmin);
 
 /**
- * GET /api/admin/players/unvalidated
- * Lista todos os jogadores que ainda não foram validados
+ * GET /api/admin/templates/unvalidated
+ * Lista todos os templates de cartas que ainda não foram validados
  */
-router.get('/players/unvalidated', async (req, res) => {
+router.get('/templates/unvalidated', async (req, res) => {
     try {
-        const unvalidatedPlayers = await playerService.getUnvalidatedPlayers();
-        res.json(unvalidatedPlayers);
+        const unvalidatedTemplates = await playerService.getUnvalidatedTemplates();
+        res.json(unvalidatedTemplates);
     } catch (error) {
-        console.error('Error fetching unvalidated players:', error);
-        res.status(500).json({ error: 'Failed to fetch unvalidated players' });
+        console.error('Error fetching unvalidated templates:', error);
+        res.status(500).json({ error: 'Failed to fetch unvalidated templates' });
     }
 });
 
 /**
- * PATCH /api/admin/players/:id/validate
- * Marca um jogador como validado
+ * PATCH /api/admin/templates/:id/validate
+ * Marca um template de carta como validado
  */
-router.patch('/players/:id/validate', async (req, res) => {
+router.patch('/templates/:id/validate', async (req, res) => {
     try {
-        const playerId = req.params.id;
-        const updatedPlayer = await playerService.markPlayerAsValidated(playerId);
-        res.json(updatedPlayer);
+        const templateId = req.params.id;
+        const updatedTemplate = await playerService.markTemplateAsValidated(templateId);
+        res.json(updatedTemplate);
     } catch (error) {
-        console.error('Error validating player:', error);
-        res.status(500).json({ error: 'Failed to validate player' });
+        console.error('Error validating template:', error);
+        res.status(500).json({ error: 'Failed to validate template' });
     }
 });
 
 /**
- * POST /api/admin/players/validate-all
- * Marca todos os jogadores do usuário admin como validados
+ * POST /api/admin/templates/validate-all
+ * Marca todos os templates não validados como validados
  */
-router.post('/players/validate-all', async (req, res) => {
+router.post('/templates/validate-all', async (req, res) => {
     try {
-        if (!req.user) {
-            res.status(401).json({ error: 'User not authenticated' });
-            return;
-        }
+        console.log(`[VALIDATE-ALL] Validating all templates`);
 
-        console.log(`[VALIDATE-ALL] Validating all players for user: ${req.user.id}`);
+        const result = await playerService.validateAllTemplates();
 
-        const result = await playerService.validateAllPlayersByUser(req.user.id);
-
-        console.log(`[VALIDATE-ALL] Validated ${result.count} players`);
+        console.log(`[VALIDATE-ALL] Validated ${result.count} templates`);
 
         res.json({
-            message: `${result.count} players validated successfully`,
+            message: `${result.count} templates validated successfully`,
             count: result.count
         });
     } catch (error) {
-        console.error('Error validating all players:', error);
-        res.status(500).json({ error: 'Failed to validate all players' });
+        console.error('Error validating all templates:', error);
+        res.status(500).json({ error: 'Failed to validate all templates' });
     }
 });
 

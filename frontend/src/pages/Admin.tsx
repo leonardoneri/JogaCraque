@@ -3,12 +3,14 @@ import { Download, Image as ImageIcon, Loader2, Lock, Save, Search, Trash2, User
 import React, { useEffect, useState } from 'react';
 import { PlayerCard } from '../components/player/PlayerCard';
 import { useGame } from '../context/GameContext';
+import { api } from '../services/api';
 import { calculatePlayerValue, generatePlayer } from '../services/gameLogic';
 import { CARD_COLLECTIONS, COUNTRIES, Player, Position } from '../types';
 
 export const Admin: React.FC = () => {
-    const { state, updatePlayerImage, updatePlayerStats, importPlayers, clearInventory, deletePlayer, validateAllPlayers } = useGame();
+    const { state, updatePlayerImage, updatePlayerStats, importCardTemplates, clearInventory, deletePlayer, validateAllTemplates } = useGame();
     const [activeTab, setActiveTab] = useState<'edit' | 'import'>('import');
+    const [playerTemplates, setPlayerTemplates] = useState<Player[]>([]);
 
     // Editor State
     const [searchQuery, setSearchQuery] = useState('');
@@ -67,7 +69,7 @@ export const Admin: React.FC = () => {
     const [scannedPlayers, setScannedPlayers] = useState<Player[]>([]);
     const [scanProgress, setScanProgress] = useState(0);
 
-    const filteredInventory = state.inventory.filter(p => {
+    const filteredInventory = playerTemplates.filter(p => {
         // Nome
         if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) {
             return false;
@@ -103,8 +105,25 @@ export const Admin: React.FC = () => {
     });
 
     // Extrair valores únicos para os filtros
-    const uniqueNationalities = [...new Set(state.inventory.map(p => p.nationality).filter(Boolean))] as string[];
-    const uniqueClubs = [...new Set(state.inventory.map(p => p.club).filter(Boolean))] as string[];
+    const uniqueNationalities = [...new Set(playerTemplates.map(p => p.nationality).filter(Boolean))] as string[];
+    const uniqueClubs = [...new Set(playerTemplates.map(p => p.club).filter(Boolean))] as string[];
+
+    // Buscar templates únicos quando o componente monta ou quando muda de aba
+    useEffect(() => {
+        const fetchTemplates = async () => {
+            try {
+                const templates = await api.get<Player[]>('/api/card-templates');
+                setPlayerTemplates(templates);
+                console.log(`[ADMIN] Loaded ${templates.length} unique templates`);
+            } catch (error) {
+                console.error('Error fetching card templates:', error);
+            }
+        };
+
+        if (activeTab === 'edit') {
+            fetchTemplates();
+        }
+    }, [activeTab]); // Recarregar quando mudar de aba
 
     const isGK = editForm.position === Position.GK;
 
@@ -221,11 +240,18 @@ export const Admin: React.FC = () => {
         setScannedPlayers(prev => prev.filter(p => p.id !== id));
     };
 
-    const handleImport = () => {
+    const handleImport = async () => {
         if (scannedPlayers.length === 0) return;
-        importPlayers(scannedPlayers);
-        alert(`${scannedPlayers.length} cartas processadas (novos jogadores ou atualizações)!`);
+        await importCardTemplates(scannedPlayers);
         setScannedPlayers([]);
+
+        // Recarregar templates após importação
+        try {
+            const templates = await api.get<Player[]>('/api/card-templates');
+            setPlayerTemplates(templates);
+        } catch (error) {
+            console.error('Error reloading templates:', error);
+        }
     };
 
     return (
@@ -340,14 +366,15 @@ export const Admin: React.FC = () => {
 
                                 <button
                                     onClick={() => {
-                                        if (window.confirm(`Validar todos os ${state.inventory.length} jogadores do inventário?\n\nIsso permitirá que eles apareçam nos pacotes.`)) {
-                                            validateAllPlayers();
+                                        const unvalidatedCount = playerTemplates.filter(p => !p.isValidated).length;
+                                        if (window.confirm(`Validar ${unvalidatedCount} templates não validados?\n\nIsso permitirá que eles apareçam nos pacotes.`)) {
+                                            validateAllTemplates();
                                         }
                                     }}
-                                    disabled={state.inventory.length === 0}
-                                    className={`w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 ${state.inventory.length === 0 ? 'bg-slate-700 text-slate-500' : 'bg-green-600 hover:bg-green-500 text-white'}`}
+                                    disabled={playerTemplates.filter(p => !p.isValidated).length === 0}
+                                    className={`w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 ${playerTemplates.filter(p => !p.isValidated).length === 0 ? 'bg-slate-700 text-slate-500' : 'bg-green-600 hover:bg-green-500 text-white'}`}
                                 >
-                                    ✓ Validar Todos ({state.inventory.length})
+                                    ✓ Validar Não Validados ({playerTemplates.filter(p => !p.isValidated).length})
                                 </button>
 
                                 <button
@@ -484,8 +511,22 @@ export const Admin: React.FC = () => {
 
                             {/* Results count */}
                             <div className="text-xs text-slate-400 text-center">
-                                {filteredInventory.length} de {state.inventory.length} jogadores
+                                {filteredInventory.length} de {playerTemplates.length} templates únicos
                             </div>
+
+                            {/* Validation status */}
+                            {playerTemplates.length > 0 && (
+                                <div className="flex items-center justify-center gap-3 text-[10px] text-slate-500">
+                                    <span className="flex items-center gap-1">
+                                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                                        {playerTemplates.filter(p => p.isValidated).length} validados
+                                    </span>
+                                    <span className="flex items-center gap-1">
+                                        <span className="w-2 h-2 rounded-full bg-yellow-500"></span>
+                                        {playerTemplates.filter(p => !p.isValidated).length} pendentes
+                                    </span>
+                                </div>
+                            )}
                         </div>
 
                         {/* Player List */}

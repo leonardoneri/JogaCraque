@@ -19,10 +19,12 @@ router.use('/auth', authRoutes);
 router.use(authMiddleware);
 
 import adminRoutes from './admin.routes.js';
+import cardTemplateRoutes from './cardTemplate.routes.js';
 import playerRoutes from './player.routes.js';
 import squadRoutes from './squad.routes.js';
 // import marketRoutes from './market.routes.js';
 
+router.use('/card-templates', cardTemplateRoutes);
 router.use('/players', playerRoutes);
 router.use('/squad', squadRoutes);
 router.use('/admin', adminRoutes);

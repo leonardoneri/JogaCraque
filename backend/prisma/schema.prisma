@@ -50,12 +50,12 @@ model User {
   @@map("users")
 }
 
-model Player {
+model CardTemplate {
   id            String   @id @default(uuid())
-  baseId        String?  // ID do jogador base
-  variation     String?  // Variação da carta
+  baseId        String   // ID da carta base (ex: s4-00001)
+  variation     String   // Variação da carta (ex: -1, -2)
   
-  // Player info
+  // Dados da carta
   name          String
   position      String   // Position enum as string
   nationality   String?
@@ -74,7 +74,31 @@ model Player {
   vision        Int
   positioning   Int
   
-  // Progression
+  // Imagem
+  image         String?
+  
+  // Validação (admin aprova antes de aparecer em pacotes)
+  isValidated   Boolean  @default(false)
+  
+  // Relação com cartas de jogadores
+  playerCards   Player[]
+  
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Índice único para evitar duplicatas
+  @@unique([baseId, variation])
+  @@map("card_templates")
+}
+
+model Player {
+  id            String   @id @default(uuid())
+  
+  // Referência ao template da carta
+  templateId    String
+  template      CardTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  
+  // Progressão individual desta carta
   level         Int      @default(1)
   xp            Int      @default(0)
   
@@ -85,12 +109,6 @@ model Player {
   
   // Market
   marketValue   Int      @default(0)
-  
-  // Image
-  image         String?
-  
-  // Validation
-  isValidated   Boolean  @default(false)  // Flag para indicar se os dados foram revisados
   
   // Relations
   userId        String?

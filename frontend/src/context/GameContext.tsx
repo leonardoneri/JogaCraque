@@ -16,10 +16,10 @@ interface GameContextType {
     refreshMarket: () => void;
     updatePlayerImage: (playerId: string, imageUrl: string) => void;
     updatePlayerStats: (playerId: string, updates: PlayerAttributesUpdate) => void;
-    importPlayers: (players: Player[]) => void;
+    importCardTemplates: (players: Player[]) => Promise<void>;
     clearInventory: () => void;
     deletePlayer: (playerId: string) => void;
-    validateAllPlayers: () => Promise<void>;
+    validateAllTemplates: () => Promise<void>;
     isLoading: boolean;
 }
 
@@ -271,18 +271,27 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const importPlayers = async (newPlayers: Player[]) => {
+    const importCardTemplates = async (newPlayers: Player[]) => {
         try {
-            await api.post('/api/players/import', { players: newPlayers });
-            // Reload inventory
-            const players = await api.get<Player[]>('/api/players');
-            setState(prev => ({
-                ...prev,
-                inventory: players
-            }));
+            const response = await api.post<{
+                message: string;
+                imported: number;
+                skipped: number;
+                total: number
+            }>('/api/card-templates/import', { players: newPlayers });
+
+            // Show detailed statistics
+            if (response.skipped > 0) {
+                alert(`✅ Importação concluída!\n\n` +
+                    `📥 ${response.imported} novos templates importados\n` +
+                    `⚠️ ${response.skipped} duplicados ignorados\n` +
+                    `📊 Total processado: ${response.total}`);
+            } else {
+                alert(`✅ ${response.imported} templates importados com sucesso!`);
+            }
         } catch (error) {
-            console.error('Error importing players:', error);
-            alert('Erro ao importar jogadores.');
+            console.error('Error importing card templates:', error);
+            alert('Erro ao importar templates.');
         }
     };
 
@@ -299,19 +308,13 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const validateAllPlayers = async () => {
+    const validateAllTemplates = async () => {
         try {
-            const response = await api.post<{ message: string; count: number }>('/api/players/validate-all');
-            alert(`✅ ${response.count} jogadores validados com sucesso!`);
-            // Reload inventory to reflect changes
-            const players = await api.get<Player[]>('/api/players');
-            setState(prev => ({
-                ...prev,
-                inventory: players
-            }));
+            const response = await api.post<{ message: string; count: number }>('/api/card-templates/validate-all');
+            alert(`✅ ${response.count} templates validados com sucesso!`);
         } catch (error) {
-            console.error('Error validating all players:', error);
-            alert('Erro ao validar jogadores.');
+            console.error('Error validating all templates:', error);
+            alert('Erro ao validar templates.');
         }
     };
 
@@ -329,10 +332,10 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             refreshMarket,
             updatePlayerImage,
             updatePlayerStats,
-            importPlayers,
+            importCardTemplates,
             clearInventory,
             deletePlayer,
-            validateAllPlayers,
+            validateAllTemplates,
             isLoading
         }}>
             {children}

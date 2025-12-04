@@ -1,25 +1,54 @@
 import { Router } from 'express';
-import { playerService } from '../services/player.service.js';
+import { playerService, PlayerWithTemplate } from '../services/player.service.js';
 
 const router = Router();
 
 // Todas as rotas já passam pelo authMiddleware no index.ts
 
-// Helper para formatar jogador para o frontend (aninhar atributos)
-const formatPlayer = (player: any) => {
-    if (!player) return null;
+// Helper para formatar jogador para o frontend (combinar Player + Template)
+const formatPlayer = (player: PlayerWithTemplate) => {
+    if (!player || !player.template) return null;
+
+    const template = player.template;
+
     return {
-        ...player,
+        id: player.id,
+        // Dados do template
+        baseId: template.baseId,
+        variation: template.variation,
+        name: template.name,
+        position: template.position,
+        nationality: template.nationality,
+        club: template.club,
+        collection: template.collection,
+        rarity: template.rarity,
+        rating: template.rating,
+        image: template.image,
+        isValidated: template.isValidated,
+        // Progressão individual do jogador
+        level: player.level,
+        xp: player.xp,
+        matches: player.matches,
+        goals: player.goals,
+        assists: player.assists,
+        marketValue: player.marketValue,
+        // Atributos aninhados (do template)
         attributes: {
-            pace: player.pace,
-            shooting: player.shooting,
-            passing: player.passing,
-            dribbling: player.dribbling,
-            defending: player.defending,
-            physical: player.physical,
-            vision: player.vision,
-            positioning: player.positioning
-        }
+            pace: template.pace,
+            shooting: template.shooting,
+            passing: template.passing,
+            dribbling: template.dribbling,
+            defending: template.defending,
+            physical: template.physical,
+            vision: template.vision,
+            positioning: template.positioning
+        },
+        // Relações
+        userId: player.userId,
+        squadId: player.squadId,
+        squadPosition: player.squadPosition,
+        createdAt: player.createdAt,
+        updatedAt: player.updatedAt
     };
 };
 
@@ -39,8 +68,8 @@ router.get('/', async (req, res) => {
         if (players.length > 0) {
             console.log(`[GET /players] First player sample:`, {
                 id: players[0].id,
-                name: players[0].name,
-                isValidated: players[0].isValidated
+                name: players[0].template?.name,
+                templateId: players[0].templateId
             });
         }
 
@@ -92,34 +121,6 @@ router.get('/:id', async (req, res) => {
     }
 });
 
-// Admin: Importar múltiplos jogadores
-router.post('/import', async (req, res) => {
-    try {
-        if (!req.user) {
-            res.status(401).json({ error: 'User not authenticated' });
-            return;
-        }
-
-        const { players } = req.body;
-        if (!Array.isArray(players)) {
-            res.status(400).json({ error: 'Players must be an array' });
-            return;
-        }
-
-        console.log(`[IMPORT] Importing ${players.length} players for user ${req.user.id}`);
-        await playerService.importPlayers(req.user.id, players);
-
-        // Verificar se foram salvos
-        const savedPlayers = await playerService.getPlayersByUser(req.user.id);
-        console.log(`[IMPORT] Total players in DB for user: ${savedPlayers.length}`);
-
-        res.status(201).json({ message: `${players.length} players imported successfully` });
-    } catch (error) {
-        console.error('Error importing players:', error);
-        res.status(500).json({ error: 'Failed to import players' });
-    }
-});
-
 // Admin: Atualizar jogador
 router.put('/:id', async (req, res) => {
     try {
@@ -168,7 +169,7 @@ router.delete('/inventory/clear', async (req, res) => {
     }
 });
 
-// Admin: Validar todos os jogadores do usuário
+// Admin: Validar todos os templates não validados
 router.post('/validate-all', async (req, res) => {
     try {
         if (!req.user) {
@@ -176,19 +177,19 @@ router.post('/validate-all', async (req, res) => {
             return;
         }
 
-        console.log(`[VALIDATE-ALL] Validating all players for user: ${req.user.id}`);
+        console.log(`[VALIDATE-ALL] Validating all templates`);
 
-        const result = await playerService.validateAllPlayersByUser(req.user.id);
+        const result = await playerService.validateAllTemplates();
 
-        console.log(`[VALIDATE-ALL] Validated ${result.count} players`);
+        console.log(`[VALIDATE-ALL] Validated ${result.count} templates`);
 
         res.json({
-            message: `${result.count} players validated successfully`,
+            message: `${result.count} templates validated successfully`,
             count: result.count
         });
     } catch (error) {
-        console.error('Error validating all players:', error);
-        res.status(500).json({ error: 'Failed to validate all players' });
+        console.error('Error validating all templates:', error);
+        res.status(500).json({ error: 'Failed to validate all templates' });
     }
 });
 

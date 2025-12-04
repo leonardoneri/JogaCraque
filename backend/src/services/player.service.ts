@@ -164,7 +164,61 @@ export class PlayerService {
      * Gera e salva um pacote de jogadores para um usuário
      */
     async generatePack(userId: string, count: number = 5): Promise<Player[]> {
-        const playersData = Array(count).fill(null).map(() => this.generateRandomPlayer(userId));
+        // Tentar buscar jogadores validados para usar como template
+        const validatedCount = await prisma.player.count({
+            where: { isValidated: true }
+        });
+
+        let playersData: any[] = [];
+
+        if (validatedCount > 0) {
+            // Buscar templates aleatórios
+            // Como o Prisma não tem "ORDER BY RANDOM()", buscamos IDs ou usamos skip aleatório
+            // Para simplificar, vamos buscar todos os validados (assumindo que não são milhões) e escolher aleatoriamente
+            // Se forem muitos, isso precisará ser otimizado
+            const templates = await prisma.player.findMany({
+                where: { isValidated: true }
+            });
+
+            playersData = Array(count).fill(null).map(() => {
+                const template = templates[randomInt(0, templates.length - 1)];
+
+                // Clonar o template para o novo usuário
+                return {
+                    userId,
+                    baseId: template.baseId,
+                    variation: template.variation,
+                    name: template.name,
+                    position: template.position,
+                    nationality: template.nationality,
+                    club: template.club,
+                    collection: template.collection,
+                    rarity: template.rarity,
+                    rating: template.rating,
+                    pace: template.pace,
+                    shooting: template.shooting,
+                    passing: template.passing,
+                    dribbling: template.dribbling,
+                    defending: template.defending,
+                    physical: template.physical,
+                    vision: template.vision,
+                    positioning: template.positioning,
+                    level: 1,
+                    xp: 0,
+                    matches: 0,
+                    goals: 0,
+                    assists: 0,
+                    marketValue: template.marketValue,
+                    image: template.image,
+                    squadId: null,
+                    squadPosition: null,
+                    isValidated: true // Jogadores gerados de templates já nascem validados
+                };
+            });
+        } else {
+            // Fallback: Gerar aleatório se não houver templates
+            playersData = Array(count).fill(null).map(() => this.generateRandomPlayer(userId));
+        }
 
         // Usar transaction para criar todos de uma vez
         const createdPlayers = await prisma.$transaction(
@@ -188,9 +242,14 @@ export class PlayerService {
      * Busca um jogador por ID
      */
     async getPlayerById(id: string): Promise<Player | null> {
-        return prisma.player.findUnique({
-            where: { id }
-        });
+        try {
+            return await prisma.player.findUnique({
+                where: { id }
+            });
+        } catch (error) {
+            console.error(`Error fetching player ${id}:`, error);
+            return null;
+        }
     }
 
     /**
@@ -245,7 +304,7 @@ export class PlayerService {
             image: p.image || null,
             squadId: null,
             squadPosition: null,
-            isValidated: false
+            isValidated: false // Importados começam como não validados (precisam de revisão)
         }));
 
         await prisma.player.createMany({
@@ -267,6 +326,7 @@ export class PlayerService {
         if (updates.club) data.club = updates.club;
         if (updates.collection) data.collection = updates.collection;
         if (updates.image) data.image = updates.image;
+        if (updates.isValidated !== undefined) data.isValidated = updates.isValidated;
 
         if (updates.attributes) {
             if (updates.attributes.pace !== undefined) data.pace = updates.attributes.pace;

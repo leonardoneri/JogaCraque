@@ -5,6 +5,24 @@ const router = Router();
 
 // Todas as rotas já passam pelo authMiddleware no index.ts
 
+// Helper para formatar jogador para o frontend (aninhar atributos)
+const formatPlayer = (player: any) => {
+    if (!player) return null;
+    return {
+        ...player,
+        attributes: {
+            pace: player.pace,
+            shooting: player.shooting,
+            passing: player.passing,
+            dribbling: player.dribbling,
+            defending: player.defending,
+            physical: player.physical,
+            vision: player.vision,
+            positioning: player.positioning
+        }
+    };
+};
+
 // Listar jogadores do usuário (Inventário)
 router.get('/', async (req, res) => {
     try {
@@ -14,7 +32,7 @@ router.get('/', async (req, res) => {
         }
 
         const players = await playerService.getPlayersByUser(req.user.id);
-        res.json(players);
+        res.json(players.map(formatPlayer));
     } catch (error) {
         console.error('Error fetching players:', error);
         res.status(500).json({ error: 'Failed to fetch players' });
@@ -32,7 +50,7 @@ router.post('/pack', async (req, res) => {
 
         // Por padrão gera 5 cartas
         const players = await playerService.generatePack(req.user.id, 5);
-        res.status(201).json(players);
+        res.status(201).json(players.map(formatPlayer));
     } catch (error) {
         console.error('Error generating pack:', error);
         res.status(500).json({ error: 'Failed to generate pack' });
@@ -55,7 +73,7 @@ router.get('/:id', async (req, res) => {
             return;
         }
 
-        res.json(player);
+        res.json(formatPlayer(player));
     } catch (error) {
         console.error('Error fetching player:', error);
         res.status(500).json({ error: 'Failed to fetch player' });
@@ -93,7 +111,7 @@ router.put('/:id', async (req, res) => {
         }
 
         const player = await playerService.updatePlayer(req.params.id, req.body);
-        res.json(player);
+        res.json(formatPlayer(player));
     } catch (error) {
         console.error('Error updating player:', error);
         res.status(500).json({ error: 'Failed to update player' });

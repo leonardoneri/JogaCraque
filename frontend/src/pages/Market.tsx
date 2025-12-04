@@ -22,9 +22,9 @@ export const Market: React.FC = () => {
     if (state.coins < PACK_COST) return;
     setOpening(true);
     setNewCards([]);
-    setTimeout(() => {
-      const cards = buyPack(PACK_COST);
-      setNewCards(cards);
+    setTimeout(async () => {
+      const cards = await buyPack(PACK_COST);
+      setNewCards(cards || []);
     }, 1500);
   };
 

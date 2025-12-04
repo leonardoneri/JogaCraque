@@ -28,18 +28,27 @@ export const authMiddleware = async (
         const token = extractTokenFromHeader(req.headers.authorization);
 
         if (!token) {
+            console.log('[AUTH] No token provided');
             res.status(401).json({ error: 'Authentication required' });
             return;
         }
 
         const payload = verifyToken(token);
+        console.log('[AUTH] Token verified for user:', payload.userId);
 
         // Verifica se usuário existe
         const user = await authService.getUserById(payload.userId);
         if (!user) {
+            console.log('[AUTH] User not found:', payload.userId);
             res.status(401).json({ error: 'Invalid token' });
             return;
         }
+
+        console.log('[AUTH] User authenticated:', {
+            id: user.id,
+            username: user.username,
+            isAdmin: user.isAdmin
+        });
 
         req.user = {
             id: payload.userId,

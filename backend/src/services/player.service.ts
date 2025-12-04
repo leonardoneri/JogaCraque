@@ -273,9 +273,27 @@ export class PlayerService {
     }
 
     /**
+     * Marca todos os jogadores de um usuário como validados (Admin)
+     */
+    async validateAllPlayersByUser(userId: string): Promise<{ count: number }> {
+        const result = await prisma.player.updateMany({
+            where: {
+                userId,
+                isValidated: false  // Só atualiza os que ainda não foram validados
+            },
+            data: { isValidated: true }
+        });
+
+        return { count: result.count };
+    }
+
+    /**
      * Importa múltiplos jogadores (Admin)
      */
     async importPlayers(userId: string, players: any[]): Promise<void> {
+        console.log(`[SERVICE] Starting import of ${players.length} players`);
+        console.log(`[SERVICE] First player sample:`, players[0]);
+
         const playersData = players.map(p => ({
             userId,
             baseId: p.baseId || `imported-${Date.now()}-${Math.random()}`,
@@ -307,10 +325,15 @@ export class PlayerService {
             isValidated: false // Importados começam como não validados (precisam de revisão)
         }));
 
-        await prisma.player.createMany({
+        console.log(`[SERVICE] Mapped ${playersData.length} players for DB insertion`);
+        console.log(`[SERVICE] First mapped player:`, playersData[0]);
+
+        const result = await prisma.player.createMany({
             data: playersData,
             skipDuplicates: true
         });
+
+        console.log(`[SERVICE] Import result:`, result);
     }
 
     /**

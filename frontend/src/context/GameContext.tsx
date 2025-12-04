@@ -19,6 +19,7 @@ interface GameContextType {
     importPlayers: (players: Player[]) => void;
     clearInventory: () => void;
     deletePlayer: (playerId: string) => void;
+    validateAllPlayers: () => Promise<void>;
     isLoading: boolean;
 }
 
@@ -298,6 +299,22 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
+    const validateAllPlayers = async () => {
+        try {
+            const response = await api.post<{ message: string; count: number }>('/api/players/validate-all');
+            alert(`✅ ${response.count} jogadores validados com sucesso!`);
+            // Reload inventory to reflect changes
+            const players = await api.get<Player[]>('/api/players');
+            setState(prev => ({
+                ...prev,
+                inventory: players
+            }));
+        } catch (error) {
+            console.error('Error validating all players:', error);
+            alert('Erro ao validar jogadores.');
+        }
+    };
+
     return (
         <GameContext.Provider value={{
             state,
@@ -315,6 +332,7 @@ export const GameProvider: React.FC<{ children: React.ReactNode }> = ({ children
             importPlayers,
             clearInventory,
             deletePlayer,
+            validateAllPlayers,
             isLoading
         }}>
             {children}

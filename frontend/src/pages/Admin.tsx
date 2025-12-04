@@ -7,11 +7,17 @@ import { calculatePlayerValue, generatePlayer } from '../services/gameLogic';
 import { CARD_COLLECTIONS, COUNTRIES, Player, Position } from '../types';
 
 export const Admin: React.FC = () => {
-    const { state, updatePlayerImage, updatePlayerStats, importPlayers, clearInventory, deletePlayer } = useGame();
+    const { state, updatePlayerImage, updatePlayerStats, importPlayers, clearInventory, deletePlayer, validateAllPlayers } = useGame();
     const [activeTab, setActiveTab] = useState<'edit' | 'import'>('import');
 
     // Editor State
     const [searchQuery, setSearchQuery] = useState('');
+    const [filterPosition, setFilterPosition] = useState('');
+    const [filterNationality, setFilterNationality] = useState('');
+    const [filterClub, setFilterClub] = useState('');
+    const [filterValidated, setFilterValidated] = useState<'all' | 'validated' | 'unvalidated'>('all');
+    const [filterMinOVR, setFilterMinOVR] = useState('');
+    const [filterMaxOVR, setFilterMaxOVR] = useState('');
     const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
 
     // Form State
@@ -61,9 +67,44 @@ export const Admin: React.FC = () => {
     const [scannedPlayers, setScannedPlayers] = useState<Player[]>([]);
     const [scanProgress, setScanProgress] = useState(0);
 
-    const filteredInventory = state.inventory.filter(p =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredInventory = state.inventory.filter(p => {
+        // Nome
+        if (searchQuery && !p.name.toLowerCase().includes(searchQuery.toLowerCase())) {
+            return false;
+        }
+        // Posição
+        if (filterPosition && p.position !== filterPosition) {
+            return false;
+        }
+        // Nacionalidade
+        if (filterNationality && p.nationality !== filterNationality) {
+            return false;
+        }
+        // Clube
+        if (filterClub && (!p.club || !p.club.toLowerCase().includes(filterClub.toLowerCase()))) {
+            return false;
+        }
+        // Status de validação
+        if (filterValidated === 'validated' && !p.isValidated) {
+            return false;
+        }
+        if (filterValidated === 'unvalidated' && p.isValidated) {
+            return false;
+        }
+        // OVR mínimo
+        if (filterMinOVR && p.rating < parseInt(filterMinOVR)) {
+            return false;
+        }
+        // OVR máximo
+        if (filterMaxOVR && p.rating > parseInt(filterMaxOVR)) {
+            return false;
+        }
+        return true;
+    });
+
+    // Extrair valores únicos para os filtros
+    const uniqueNationalities = [...new Set(state.inventory.map(p => p.nationality).filter(Boolean))] as string[];
+    const uniqueClubs = [...new Set(state.inventory.map(p => p.club).filter(Boolean))] as string[];
 
     const isGK = editForm.position === Position.GK;
 
@@ -299,6 +340,18 @@ export const Admin: React.FC = () => {
 
                                 <button
                                     onClick={() => {
+                                        if (window.confirm(`Validar todos os ${state.inventory.length} jogadores do inventário?\n\nIsso permitirá que eles apareçam nos pacotes.`)) {
+                                            validateAllPlayers();
+                                        }
+                                    }}
+                                    disabled={state.inventory.length === 0}
+                                    className={`w-full py-3 rounded-lg font-bold flex items-center justify-center gap-2 ${state.inventory.length === 0 ? 'bg-slate-700 text-slate-500' : 'bg-green-600 hover:bg-green-500 text-white'}`}
+                                >
+                                    ✓ Validar Todos ({state.inventory.length})
+                                </button>
+
+                                <button
+                                    onClick={() => {
                                         if (window.confirm("Tem certeza? Isso apagará TODOS os jogadores do seu inventário.")) {
                                             clearInventory();
                                         }
@@ -351,7 +404,9 @@ export const Admin: React.FC = () => {
                 <div className="flex flex-col xl:flex-row gap-6 h-[700px]">
                     {/* Inventory List */}
                     <div className="w-full xl:w-1/3 bg-slate-800 rounded-xl border border-slate-700 flex flex-col overflow-hidden h-[300px] xl:h-auto">
-                        <div className="p-4 border-b border-slate-700 bg-slate-900/50">
+                        {/* Search and Filters Header */}
+                        <div className="p-4 border-b border-slate-700 bg-slate-900/50 space-y-3">
+                            {/* Search */}
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" size={16} />
                                 <input
@@ -362,7 +417,78 @@ export const Admin: React.FC = () => {
                                     className="w-full bg-slate-950 border border-slate-700 rounded-lg py-2 pl-9 pr-4 text-sm text-white focus:outline-none focus:border-green-500"
                                 />
                             </div>
+
+                            {/* Filters Row 1 */}
+                            <div className="grid grid-cols-2 gap-2">
+                                <select
+                                    value={filterPosition}
+                                    onChange={(e) => setFilterPosition(e.target.value)}
+                                    className="bg-slate-950 border border-slate-700 rounded-lg py-1.5 px-2 text-xs text-white focus:outline-none focus:border-green-500"
+                                >
+                                    <option value="">Todas Posições</option>
+                                    {Object.values(Position).map(pos => (
+                                        <option key={pos} value={pos}>{pos}</option>
+                                    ))}
+                                </select>
+
+                                <select
+                                    value={filterValidated}
+                                    onChange={(e) => setFilterValidated(e.target.value as 'all' | 'validated' | 'unvalidated')}
+                                    className="bg-slate-950 border border-slate-700 rounded-lg py-1.5 px-2 text-xs text-white focus:outline-none focus:border-green-500"
+                                >
+                                    <option value="all">Todos Status</option>
+                                    <option value="validated">✓ Validados</option>
+                                    <option value="unvalidated">⚠ Não Validados</option>
+                                </select>
+                            </div>
+
+                            {/* Filters Row 2 */}
+                            <div className="grid grid-cols-2 gap-2">
+                                <input
+                                    type="number"
+                                    placeholder="OVR Min"
+                                    value={filterMinOVR}
+                                    onChange={(e) => setFilterMinOVR(e.target.value)}
+                                    className="bg-slate-950 border border-slate-700 rounded-lg py-1.5 px-2 text-xs text-white focus:outline-none focus:border-green-500"
+                                />
+                                <input
+                                    type="number"
+                                    placeholder="OVR Max"
+                                    value={filterMaxOVR}
+                                    onChange={(e) => setFilterMaxOVR(e.target.value)}
+                                    className="bg-slate-950 border border-slate-700 rounded-lg py-1.5 px-2 text-xs text-white focus:outline-none focus:border-green-500"
+                                />
+                            </div>
+
+                            {/* Filters Row 3 */}
+                            <div className="grid grid-cols-2 gap-2">
+                                <select
+                                    value={filterNationality}
+                                    onChange={(e) => setFilterNationality(e.target.value)}
+                                    className="bg-slate-950 border border-slate-700 rounded-lg py-1.5 px-2 text-xs text-white focus:outline-none focus:border-green-500"
+                                >
+                                    <option value="">Todos Países</option>
+                                    {uniqueNationalities.sort().map(nat => (
+                                        <option key={nat} value={nat}>{nat}</option>
+                                    ))}
+                                </select>
+
+                                <input
+                                    type="text"
+                                    placeholder="Filtrar Clube"
+                                    value={filterClub}
+                                    onChange={(e) => setFilterClub(e.target.value)}
+                                    className="bg-slate-950 border border-slate-700 rounded-lg py-1.5 px-2 text-xs text-white focus:outline-none focus:border-green-500"
+                                />
+                            </div>
+
+                            {/* Results count */}
+                            <div className="text-xs text-slate-400 text-center">
+                                {filteredInventory.length} de {state.inventory.length} jogadores
+                            </div>
                         </div>
+
+                        {/* Player List */}
                         <div className="flex-1 overflow-y-auto p-2 space-y-2 custom-scrollbar">
                             {filteredInventory.map(player => (
                                 <div
@@ -370,12 +496,27 @@ export const Admin: React.FC = () => {
                                     onClick={() => setSelectedPlayer(player)}
                                     className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${selectedPlayer?.id === player.id ? 'bg-green-600/20 border border-green-500/50' : 'hover:bg-slate-700/50 border border-transparent'}`}
                                 >
-                                    <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-900">
+                                    <div className="w-10 h-10 rounded-full overflow-hidden bg-slate-900 flex-shrink-0">
                                         <img src={player.image} alt={player.name} className="w-full h-full object-cover" />
                                     </div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-bold text-white">{player.name}</p>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-sm font-bold text-white truncate">{player.name}</p>
+                                            {!player.isValidated && (
+                                                <span className="text-[10px] bg-yellow-600/20 text-yellow-400 px-1.5 py-0.5 rounded border border-yellow-600/30 flex-shrink-0">
+                                                    ⚠
+                                                </span>
+                                            )}
+                                            {player.isValidated && (
+                                                <span className="text-[10px] bg-green-600/20 text-green-400 px-1.5 py-0.5 rounded border border-green-600/30 flex-shrink-0">
+                                                    ✓
+                                                </span>
+                                            )}
+                                        </div>
                                         <p className="text-xs text-slate-400">{player.position} • {player.rating} OVR</p>
+                                        {player.club && (
+                                            <p className="text-[10px] text-slate-500 truncate">{player.club}</p>
+                                        )}
                                     </div>
                                 </div>
                             ))}

@@ -36,4 +36,31 @@ router.patch('/players/:id/validate', async (req, res) => {
     }
 });
 
+/**
+ * POST /api/admin/players/validate-all
+ * Marca todos os jogadores do usuário admin como validados
+ */
+router.post('/players/validate-all', async (req, res) => {
+    try {
+        if (!req.user) {
+            res.status(401).json({ error: 'User not authenticated' });
+            return;
+        }
+
+        console.log(`[VALIDATE-ALL] Validating all players for user: ${req.user.id}`);
+
+        const result = await playerService.validateAllPlayersByUser(req.user.id);
+
+        console.log(`[VALIDATE-ALL] Validated ${result.count} players`);
+
+        res.json({
+            message: `${result.count} players validated successfully`,
+            count: result.count
+        });
+    } catch (error) {
+        console.error('Error validating all players:', error);
+        res.status(500).json({ error: 'Failed to validate all players' });
+    }
+});
+
 export default router;
